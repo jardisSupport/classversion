@@ -11,20 +11,6 @@ next: [platform-versioning]
 # CLASSVERSION_COMPONENT_SKILL
 > jardissupport/classversion | NS: `JardisSupport\ClassVersion` | PHP 8.2+
 
-## SOURCE LAYOUT
-```
-src/
-├── ClassVersion.php             ← Orchestrator (entry point, ClassVersionInterface)
-├── Data/ClassVersionConfig.php
-├── Reader/                      ← ClassVersionInterface implementations
-│   ├── LoadClassFromSubDirectory.php
-│   ├── LoadClassFromExtensions.php
-│   └── LoadClassFromProxy.php
-└── Support/                     ← helpers (NOT ClassVersionInterface)
-    ├── ClassResolutionCache.php
-    └── TracingClassVersion.php
-```
-
 ## RESOLUTION FLOW
 ```
 ClassVersion::__invoke($class, $version)
@@ -100,12 +86,9 @@ Tries : 1. Acme\BC\Agg\v2\Command\Handler\Foo                  (dev override v2,
         4. Acme\BC\Agg\Platform\Command\Handler\Foo            (platform baseline)
         5. Acme\BC\Agg\Command\Handler\Foo                     (generator-base fallback)
 ```
-A versioned hit in any segment wins over a versionless hit in any segment — outer loop = version chain, inner loop = segments per version, then a baseline loop over segments, finally `class_exists($className)` as terminal fallback.
-
 - `depth` is **mandatory**; `segmentNames` defaults to `['Extensions']` for BC
 - The empty string `''` is a legal segment value meaning "no subdir inserted, probe the root directly"
 - Classes with fewer than `depth + 1` segments skip the override lookup entirely
-- Pure `strpos`/`substr`, zero array allocations on the happy path
 
 ## CLASSVERSIONCONFIG API
 ```php
@@ -131,7 +114,6 @@ $config->fallbackChain(null);      // []
 ```php
 $proxy->addProxy(Logger::class, new FileLogger(), 'prod')->addProxy(...);  // fluent
 $proxy->removeProxy(Logger::class, 'prod');   // cleans up empty buckets
-// Storage: $cachedProxy[$version][$className] = $object
 // With config: version() for alias resolution; without: trim($version ?? '')
 ```
 
@@ -154,7 +136,6 @@ use JardisSupport\ClassVersion\Support\ClassResolutionCache;
 $cache = new ClassResolutionCache();
 $cv    = new ClassVersion($config, $finder, $proxy, cache: $cache);
 
-// Internally, ClassVersion uses $cache->remember("$className|$version", fn () => resolve())
 $cache->clear();  // test isolation / explicit invalidation
 ```
 - **NOT** a `ClassVersionInterface` — cannot take `ClassVersion`'s place
