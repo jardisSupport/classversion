@@ -4,8 +4,8 @@ description: Versioned class loading via namespace injection, proxy cache, fallb
 user-invocable: false
 zone: post-active
 persona: C
-prerequisites: [rules-architecture, rules-patterns]
-next: [platform-versioning]
+prerequisites: [foundation-architecture, foundation-patterns]
+next: [generated-code-versioning]
 ---
 
 # CLASSVERSION_COMPONENT_SKILL
