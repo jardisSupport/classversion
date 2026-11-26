@@ -71,9 +71,12 @@ $config = new ClassVersionConfig(
     fallbacks: ['V2' => ['V1']],
 );
 
-// Proxy registry: return a pre-built instance for a specific class + version
+// Proxy registry: return a pre-built instance for a specific class + version.
+// A proxy registered without version applies in a run with any version, unless a
+// proxy registered under that version overrides it (no chain over other versions).
 $proxy = new LoadClassFromProxy($config);
 $proxy->addProxy(App\Service\Calculator::class, new MyTestCalculator(), 'v2');
+$proxy->addProxy(App\Service\Clock::class, new FixedClock());   // no version: valid for every version
 
 // Optional: resolution cache memoizes hits and misses — same (class, version)
 // key never hits the autoloader twice.
