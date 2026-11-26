@@ -239,4 +239,84 @@ final class LoadClassFromProxyTest extends TestCase
         $this->assertSame($p2, $loader('B', 'b1'));
         $this->assertSame($p3, $loader('C', 'gamma'));
     }
+
+    /**
+     * Contract A11-V1: a stand-in registered without version answers a requested version
+     * that has no stand-in of its own (no config).
+     */
+    public function testVersionlessProxyAnswersRequestedVersionWithoutConfig(): void
+    {
+        $loader = new LoadClassFromProxy();
+
+        $proxy = (object)['versionless' => true];
+        $loader->addProxy(\stdClass::class, $proxy);
+
+        $this->assertSame($proxy, $loader(\stdClass::class, 'v2'));
+    }
+
+    /**
+     * Contract A11-V1: same with an alias config, requested through an alias.
+     */
+    public function testVersionlessProxyAnswersRequestedAliasWithConfig(): void
+    {
+        $config = new ClassVersionConfig([
+            'v2' => ['beta', 'version2'],
+        ]);
+        $loader = new LoadClassFromProxy($config);
+
+        $proxy = (object)['versionless' => true];
+        $loader->addProxy(\stdClass::class, $proxy);
+
+        $this->assertSame($proxy, $loader(\stdClass::class, 'beta'));
+        $this->assertSame($proxy, $loader(\stdClass::class, 'v2'));
+    }
+
+    /**
+     * Contract A11-V2: a stand-in under the requested version overrides the versionless one.
+     */
+    public function testVersionedProxyOverridesVersionlessProxy(): void
+    {
+        $loader = new LoadClassFromProxy();
+
+        $versionless = (object)['versionless' => true];
+        $versioned = (object)['v' => 2];
+        $loader->addProxy(\stdClass::class, $versionless);
+        $loader->addProxy(\stdClass::class, $versioned, 'v2');
+
+        $this->assertSame($versioned, $loader(\stdClass::class, 'v2'));
+        $this->assertSame($versionless, $loader(\stdClass::class));
+    }
+
+    /**
+     * Contract A11-V1 (end): after removing the versionless stand-in the requested version
+     * answers null again.
+     */
+    public function testRemovingVersionlessProxyEndsTheFallback(): void
+    {
+        $loader = new LoadClassFromProxy();
+
+        $loader->addProxy(\stdClass::class, (object)[]);
+        $this->assertNotNull($loader(\stdClass::class, 'v2'));
+
+        $loader->removeProxy(\stdClass::class);
+
+        $this->assertNull($loader(\stdClass::class, 'v2'));
+    }
+
+    /**
+     * Contract A11 no chain: the fallback goes to the versionless bucket only,
+     * never along the config fallback chain (v3 does not reach a stand-in under v2).
+     */
+    public function testProxyFallbackFollowsNoVersionChain(): void
+    {
+        $config = new ClassVersionConfig(
+            ['v2' => ['version2'], 'v3' => ['version3']],
+            ['v3' => ['v2']]
+        );
+        $loader = new LoadClassFromProxy($config);
+
+        $loader->addProxy(\stdClass::class, (object)['v' => 2], 'v2');
+
+        $this->assertNull($loader(\stdClass::class, 'v3'));
+    }
 }

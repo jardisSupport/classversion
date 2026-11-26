@@ -22,6 +22,10 @@ class LoadClassFromProxy implements ClassVersionInterface
     }
 
     /**
+     * Returns the proxy registered for the class under the requested version.
+     * If that version holds none (or does not exist), the proxy registered without
+     * version applies; without both the result is null. No chain over other versions.
+     *
      * @template T
      * @param class-string<T> $className
      * @param ?string $version
@@ -32,15 +36,9 @@ class LoadClassFromProxy implements ClassVersionInterface
         $className = trim($className);
         $version = $this->version($version);
 
-        if (!isset($this->cachedProxy[$version])) {
-            return null;
-        }
-
-        if (!isset($this->cachedProxy[$version][$className])) {
-            return null;
-        }
-
-        return $this->cachedProxy[$version][$className];
+        return $this->cachedProxy[$version][$className]
+            ?? $this->cachedProxy[''][$className]
+            ?? null;
     }
 
     public function addProxy(string $className, object $proxy, ?string $version = null): self

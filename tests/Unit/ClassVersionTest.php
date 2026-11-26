@@ -414,6 +414,64 @@ class ClassVersionTest extends TestCase
     }
 
     // =========================================================================
+    // A11: stand-in without version in a run with a version
+    // =========================================================================
+
+    /**
+     * Contract A11-V3: without a stand-in the class search runs as before, with the
+     * base class as final fallback.
+     */
+    public function testWithoutProxyClassSearchRunsWithFallbackToBase(): void
+    {
+        $config = new ClassVersionConfig([
+            'v2' => ['version2'],
+            'v9' => ['version9'],
+        ]);
+        $classVersion = new ClassVersion($config, new LoadClassFromSubDirectory($config));
+
+        $this->assertSame(V2VersionClass::class, $classVersion(VersionClass::class, 'v2'));
+        $this->assertSame(VersionClass::class, $classVersion(VersionClass::class, 'v9'));
+    }
+
+    /**
+     * Contract A11-V4: a versionless stand-in wins over an existing class under v2/ in a v2 run.
+     */
+    public function testVersionlessProxyWinsOverVersionedClassInVersionRun(): void
+    {
+        $config = new ClassVersionConfig(['v2' => ['version2']]);
+        $proxyFinder = new LoadClassFromProxy($config);
+        $proxy = new VersionClass();
+        $proxyFinder->addProxy(VersionClass::class, $proxy);
+
+        $classVersion = new ClassVersion($config, new LoadClassFromSubDirectory($config), $proxyFinder);
+
+        $this->assertSame($proxy, $classVersion(VersionClass::class, 'v2'));
+        $this->assertSame($proxy, $classVersion(VersionClass::class, 'version2'));
+        $this->assertSame($proxy, $classVersion(VersionClass::class));
+    }
+
+    /**
+     * Contract A11-V4: same with ClassResolutionCache.
+     */
+    public function testVersionlessProxyWinsOverVersionedClassWithCache(): void
+    {
+        $config = new ClassVersionConfig(['v2' => ['version2']]);
+        $proxyFinder = new LoadClassFromProxy($config);
+        $proxy = new VersionClass();
+        $proxyFinder->addProxy(VersionClass::class, $proxy);
+
+        $classVersion = new ClassVersion(
+            $config,
+            new LoadClassFromSubDirectory($config),
+            $proxyFinder,
+            cache: new ClassResolutionCache()
+        );
+
+        $this->assertSame($proxy, $classVersion(VersionClass::class, 'v2'));
+        $this->assertSame($proxy, $classVersion(VersionClass::class, 'v2'));
+    }
+
+    // =========================================================================
     // Optional ClassResolutionCache integration
     // =========================================================================
 
